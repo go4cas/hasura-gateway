@@ -6,6 +6,7 @@ import * as jwt from 'jsonwebtoken';
 import { services } from './services';
 
 export const authService = async () => {
+  // find service that is flagged as the authentication service
   return await _.find(services, { 'authService': true });
 };
 

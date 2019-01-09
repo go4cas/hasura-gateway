@@ -50,12 +50,7 @@ const makeHttpAndWsLink = (uri, headers) => {
   return link;
 };
 
-/*
-export const authService = async () => {
-  return await _.find(services, { 'authService': true });
-};
-*/
-
+// build typeDefs for any realted services (cross-service relations)
 export const buildRelatedTypeDef = async (resolverObject) => {
  const relatedTypeDef = `extend type ${resolverObject.entity} {
   ${resolverObject.entityField}: ${resolverObject.relatedEntity}!
@@ -64,6 +59,7 @@ export const buildRelatedTypeDef = async (resolverObject) => {
  return relatedTypeDef;
 };
 
+// build resolvers for related entities
 export const buildRelatedResolver = async (mergedSchema, resolverObject) => {
   const relatedEntity = {
     [resolverObject.entityField]: {
@@ -74,7 +70,7 @@ export const buildRelatedResolver = async (mergedSchema, resolverObject) => {
           schema: _.find(mergedSchema, { 'name': resolverObject.relatedService }),
           operation: 'query',
           fieldName: resolverObject.relatedEntity,
-          args: {where: {[resolverObject.relatedField]: {_eq: id}}},
+          args: {where: {[resolverObject.relatedField]: {_eq: id}}},  // TODO: see if the _by_pk helper queries will work better
           context,
           info
         })
