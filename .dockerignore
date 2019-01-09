@@ -8,6 +8,7 @@ test
 data/
 db/
 src/
+assets/
 .DS_Store
 *.sh
 npm-debug.log
