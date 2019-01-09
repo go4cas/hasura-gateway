@@ -1,0 +1,52 @@
+{
+  "name": "hasura-gateway",
+  "version": "0.1.0",
+  "description": "GraphQL API Gateway for Hasura services",
+  "main": "index.js",
+  "scripts": {
+    "serve": "DOTENV_CONFIG_PATH=./dev.env nodemon -r esm src/index.js",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build-local": "babel ./src -d ./dist",
+    "build-docker": "docker build -t go4cas/hasura-gateway:latest .",
+    "build": "npm run build-local && npm run build-docker",
+    "start": "node -r esm ./index.js"
+  },
+  "keywords": [
+    "graphql",
+    "api",
+    "gateway",
+    "postgresql",
+    "console"
+  ],
+  "author": "Cas du Plessis <cas@takealot.com>",
+  "license": "MIT",
+  "private": true,
+  "dependencies": {
+    "apollo-boost": "^0.1.23",
+    "apollo-link-http": "^1.5.9",
+    "apollo-link-ws": "^1.0.12",
+    "apollo-server-express": "^2.3.1",
+    "apollo-utilities": "^1.0.27",
+    "async": "^2.6.1",
+    "bcryptjs": "^2.4.3",
+    "body-parser": "^1.18.3",
+    "cross-fetch": "^3.0.0",
+    "dotenv": "^6.2.0",
+    "dotenv-expand": "^4.2.0",
+    "esm": "^3.0.84",
+    "express": "^4.16.4",
+    "graphql": "^14.0.2",
+    "graphql-tools-with-subscriptions": "^1.0.0",
+    "jsonwebtoken": "^8.4.0",
+    "lodash": "^4.17.11",
+    "node-fetch": "^2.3.0",
+    "subscriptions-transport-ws": "^0.9.15"
+  },
+  "devDependencies": {
+    "babel-cli": "^6.26.0",
+    "nodemon": "^1.18.9"
+  },
+  "esm": {
+    "mode": "all"
+  }
+}
