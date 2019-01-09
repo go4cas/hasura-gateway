@@ -189,10 +189,3 @@ process.on('SIGTERM', () => {
   console.error('SIGTERM. Graceful shutdown ');
   process.exit();
 });
-
-/**
- * TODO: Add refresh token, including token expiry, and persisting refresh tokens to db
- * TODO: Test subscriptions
- * TODO: Move login, signin and validate to auth module
- * TODO: Create git repo
- */
