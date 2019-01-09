@@ -1,8 +1,9 @@
 ## Hasura Gateway
-A proof-of-concept (and opinionated) GraphQL API gateway for Hasura microservices.
+A proof-of-concept (and opinionated) GraphQL API gateway for [Hasura](https://hasura.io/) microservices.
+> Inspired by [this blog post](https://blog.hasura.io/the-ultimate-guide-to-schema-stitching-in-graphql-f30178ac0072) the [Hasura examples](https://github.com/hasura/schema-stitching-examples).
 
 #### Introduction
-The Hasura Gateway is intended to create a single entry point from client applications (web apps, mobile apps, etc) into an ecosystem of Hasura microservices.
+The Hasura Gateway is intended to create a single entry point from client applications (web apps, mobile apps, etc) into an ecosystem of [Hasura](https://hasura.io/) microservices.
 
 The general architecture looks like this:
 
