@@ -1,17 +1,15 @@
 "use strict";
 
 import { } from 'dotenv/config';
+import { _ } from 'lodash';
 import express from 'express';
 import bodyParser from 'body-parser';
-import bcrypt from 'bcryptjs';
 import { ApolloServer } from 'apollo-server-express';
 import 'cross-fetch/polyfill';
 import { mergeSchemas } from 'graphql-tools';
 import { getRemoteSchema, buildRelatedResolver, buildRelatedTypeDef } from './utils';
 import { services } from './services';
-import { sign, authService, validToken } from './authenticate';
-import { reject } from 'async';
-import ApolloClient, { gql } from 'apollo-boost';
+import { AuthenticationService } from './authentication';
 
 
 const runServer = async () => {
@@ -46,20 +44,9 @@ const runServer = async () => {
     resolvers
   });
 
-  // construct an Apollo Client to call the remote auth service
-  const authClient = await authService()  // TODO: move to the authentication module
-  .then(service => {
-    return new ApolloClient({
-      uri: service.uri,
-      request: operation => {
-        operation.setContext({
-          headers: {
-            'X-Hasura-Access-Key': service.key,
-          },
-        });
-      },
-    });
-  });
+  // find service that is flagged as the authentication service and construct auth service
+  const authService = await _.find(services, 'auth');
+  const authenticationService = await new AuthenticationService(authService);
   
   // construct the gateway GraphQL server, using Apollo Server
   const server = await new ApolloServer({
@@ -68,7 +55,7 @@ const runServer = async () => {
     playground: true,
   });
 
-  // for our auth routs wee need to use express
+  // for auth routes we need to use express
   const app = await express();
   await app.use(bodyParser.json());
 
@@ -78,7 +65,7 @@ const runServer = async () => {
     if (authHeader) {
       const token = authHeader.split(' ')[1];
       const options = {};
-      const valid = validToken(token, options);
+      const valid = await authenticationService.validateToken(token, options);
       if (valid) {
         next();
       } else {
@@ -92,42 +79,8 @@ const runServer = async () => {
   // login route
   await app.post('/login', async(req, res) => {
     const { email, password } = await req.body;
-    const query = gql`
-      query authUser($email: String!) {
-        users (where: {email: {_eq: $email}}) {
-          email
-          password
-        }
-      }
-    `;
-    const variables = {
-      "email": email
-    };
-    const token = await authClient.query({ query, variables })  // TODO: move to the authentication module
-    .then(res => {
-      if (res.data.users[0]) {
-        if (bcrypt.compareSync(password, res.data.users[0].password)) {
-          const payload = {};
-          payload[process.env.GATEWAY_JWT_CLAIMS_NAMESPACE] = {  // TODO: remove hardcoded values once ACL module has been implemented
-            'x-hasura-allowed-roles': ['admin'],
-            'x-hasura-default-role': 'admin',
-          };
-          const options = {
-            subject: '',
-            issuer: '',
-            audience: '',
-          };
-          return sign(payload, process.env.GATWAY_JWT_KEY, options);  
-        } else {
-          reject();
-        };
-      } else {
-        reject();
-      }
-    })
-    .catch(err => {
-      return null;
-    });
+
+    const token = await authenticationService.login(email, password);
     if (token) {
       res.json({ token });
     } else {
@@ -138,32 +91,8 @@ const runServer = async () => {
   // signup route
   await app.post('/signup', async(req, res) => {
     const { email, password } = await req.body;
-    const hashedPassword = bcrypt.hashSync(password, process.env.GATEWAY_AUT_SALT_ROUNDS);
-    const mutation = gql`
-      mutation insertUsers($email: String!, $password: String!) {
-        insert_users(objects: [{email: $email, password: $password, user_status_id: 1}]) {
-          returning {
-            id
-          }
-        }
-      }
-    `;
-    const variables = {
-      "email": email,
-      "password": hashedPassword
-    };
-    const user = await authClient.mutate({ mutation, variables })  // TODO: move to the authentication module
-    .then(res => {
-      if (res.data.insert_users.returning[0]) {
-        return res.data.insert_users.returning[0];
-      } else {
-        reject();
-      }
-    })
-    .catch(err => {
-      return null;
-    });
 
+    const user = await authenticationService.signup(email, password);
     if (user) {
       res.json({ user });
     } else {
@@ -184,7 +113,7 @@ const runServer = async () => {
   await app.listen({ port }, () => {
     console.log('server running on port',process.env.GATEWAY_PORT);
   });
-}
+};
 
 try {
   runServer();

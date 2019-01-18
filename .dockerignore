@@ -9,6 +9,7 @@ data/
 db/
 src/
 assets/
+temp/
 .DS_Store
 *.sh
 npm-debug.log

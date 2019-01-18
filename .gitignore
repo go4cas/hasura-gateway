@@ -6,6 +6,7 @@ test
 .idea/
 data/
 db/
+temp/
 .DS_Store
 npm-debug.log
 yarn-error.log

@@ -9,7 +9,6 @@ import { makeRemoteExecutableSchema, introspectSchema } from 'graphql-tools';
 import fetch from 'node-fetch';
 import { split } from 'apollo-link';
 import { getMainDefinition } from 'apollo-utilities';
-import { services } from './services';
 
 export const getRemoteSchema = async (uri, headers) => {
   const link = makeHttpAndWsLink(uri, headers);

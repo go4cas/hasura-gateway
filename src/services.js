@@ -7,11 +7,11 @@ export const services = [
     key: process.env.SERVICE_BOOKS_ACCESS_KEY,
     relatedServices: [
       {
-        entity: 'books',
+        entity: 'book',
         entityField: 'author',
         linkingField: 'author_id',
         relatedService: 'authors',
-        relatedEntity: 'authors',
+        relatedEntity: 'author',
         relatedField: 'id'
       }
     ]
@@ -19,22 +19,39 @@ export const services = [
   {
     name: 'authors',
     uri: process.env.SERVICE_AUTHORS_URI,
-    key: process.env.SERVICE_AUTHORS_ACCESS_KEY,
-    relatedServices: [
-      {
-        entity: 'authors',
-        entityField: 'books',
-        linkingField: 'book_id',
-        relatedService: 'books',
-        relatedEntity: 'books',
-        relatedField: 'id'
-      }
-    ]
+    key: process.env.SERVICE_AUTHORS_ACCESS_KEY
   },
   {
     name: 'auth',
     uri: process.env.SERVICE_AUTH_URI,
     key: process.env.SERVICE_AUTH_ACCESS_KEY,
-    authService: true
+    auth: {
+      headers: {
+        'X-Hasura-Access-Key': process.env.SERVICE_AUTH_ACCESS_KEY,
+      },
+      params: {
+        username: 'email',
+        password: 'password'
+      },
+      loginQuery: `
+        query authUser($email: String!) {
+          user (where: {email: {_eq: $email}}) {
+            email
+            password
+          }
+        }
+      `,
+      loginResponseObject: 'data.user[0]',
+      signupMutation: `
+        mutation insertUser($email: String!, $password: String!) {
+          insert_user(objects: [{email: $email, password: $password}]) {
+            returning {
+              id
+            }
+          }
+        }
+      `,
+      signupResponseObject: 'data.insert_user.returning[0]'
+    }
   }
 ];

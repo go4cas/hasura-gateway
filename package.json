@@ -7,7 +7,7 @@
     "serve": "DOTENV_CONFIG_PATH=./dev.env nodemon -r esm src/index.js",
     "test": "echo \"Error: no test specified\" && exit 1",
     "build-local": "babel ./src -d ./dist",
-    "build-docker": "docker build -t go4cas/hasura-gateway:latest .",
+    "build-docker": "docker build -t hasura-gateway:latest .",
     "build": "npm run build-local && npm run build-docker",
     "start": "node -r esm ./index.js"
   },
@@ -18,7 +18,7 @@
     "postgresql",
     "console"
   ],
-  "author": "Cas du Plessis <cas@takealot.com>",
+  "author": "Cas du Plessis <go4cas@gmail.com>",
   "license": "MIT",
   "private": true,
   "dependencies": {

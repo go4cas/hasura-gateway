@@ -1,6 +1,6 @@
 ## Hasura Gateway
 A proof-of-concept (and opinionated) GraphQL API gateway for [Hasura](https://hasura.io/) microservices.
-> Inspired by [this blog post](https://blog.hasura.io/the-ultimate-guide-to-schema-stitching-in-graphql-f30178ac0072) the [Hasura examples](https://github.com/hasura/schema-stitching-examples).
+> Inspired by [this blog post](https://blog.hasura.io/the-ultimate-guide-to-schema-stitching-in-graphql-f30178ac0072) and the [Hasura examples](https://github.com/hasura/schema-stitching-examples).
 
 #### Introduction
 The Hasura Gateway is intended to create a single entry point from client applications (web apps, mobile apps, etc) into an ecosystem of [Hasura](https://hasura.io/) microservices.
@@ -8,6 +8,26 @@ The Hasura Gateway is intended to create a single entry point from client applic
 The general architecture looks like this:
 
 ![alt text](assets/arch.png)
+
+#### Installation
+- Clone this repo: `git clone https://github.com/go4cas/hasura-gateway.git`
+- Install dependencies, from project root: `npm install`
+- Define services and inter-service dependencies (see _Concepts_ section below)
+- Include environment variables (`.env` or `dev.env`file)
+- Run db scripts on your Postgres instance: `sricpts/db/db_create.sql` (to create the databases and user accounts for the microservices db's), then `scripts/db/books.sql`, `scripts/db/authors.sql` and `scripts/db/auth.sql` to generate the schemas for each of the microservices db's
+- If you are uding Docker, build the local `hasura-gateway` image, using: `npm run build`
+- Start the local gateway: `npm run serve`, or using docker-compose (to start gateway, microservices and Postgres): `docker-compose up -d`
+
+#### Using
+- Register a user, `POST`ing to the `/signup` endpoint (email/username and password to be included in the body)
+- Login with the newly created user by `POST`ing to the `/login` endpoint (email/username and password to be included in the body)
+- Query inter-realted services by `POST`ing to the ``/graphql` endpoint, e.g. body: `{"query": "{book {title author {name}}}"}` (remember to include `Authorization: Bearer <<token here>>`)
+
+#### Helper Scripts
+- Local Dev Environment (including hot reloading): `npm run serve`
+- Build deployment artefacts: `npm run build-local`
+- Build local docker image: `npm run build-docker`
+- Build and package production docker image: `npm run build`
 
 #### Concepts
 Services, and their relationships are defined in the `/src/services.js` file:
@@ -21,11 +41,11 @@ export const services = [
     key: process.env.SERVICE_BOOKS_ACCESS_KEY,
     relatedServices: [
       {
-        entity: 'books',
+        entity: 'book',
         entityField: 'author',
         linkingField: 'author_id',
         relatedService: 'authors',
-        relatedEntity: 'authors',
+        relatedEntity: 'author',
         relatedField: 'id'
       }
     ]
@@ -36,11 +56,11 @@ export const services = [
     key: process.env.SERVICE_AUTHORS_ACCESS_KEY,
     relatedServices: [
       {
-        entity: 'authors',
+        entity: 'author',
         entityField: 'books',
         linkingField: 'book_id',
         relatedService: 'books',
-        relatedEntity: 'books',
+        relatedEntity: 'book',
         relatedField: 'id'
       }
     ]
@@ -49,74 +69,39 @@ export const services = [
     name: 'auth',
     uri: process.env.SERVICE_AUTH_URI,
     key: process.env.SERVICE_AUTH_ACCESS_KEY,
-    authService: true
+    auth: {
+      headers: {
+        'X-Hasura-Access-Key': process.env.SERVICE_AUTH_ACCESS_KEY,
+      },
+      params: {
+        username: 'email',
+        password: 'password'
+      },
+      loginQuery: `
+        query authUser($email: String!) {
+          user (where: {email: {_eq: $email}}) {
+            email
+            password
+          }
+        }
+      `,
+      loginResponseObject: 'data.user[0]',
+      signupMutation: `
+        mutation insertUser($email: String!, $password: String!) {
+          insert_user(objects: [{email: $email, password: $password}]) {
+            returning {
+              id
+            }
+          }
+        }
+      `,
+      signupResponseObject: 'data.insert_user.returning[0]'
+    }
   }
 ];
 ```
 
-#### Sample docker-compose
-```Dockerfile
-version: '3.6'
-services:
-  postgres:
-    image: postgres
-    restart: always
-    volumes:
-    - db_data:/var/lib/postgresql/data
-    ports:
-    - "5491:5432"
-  edge-service:
-    image: go4cas/hasura-gateway:latest
-    ports:
-    - "5000:4000"
-    restart: always
-    env_file: .env
-  books-service:
-    image: hasura/graphql-engine:v1.0.0-alpha34
-    ports:
-    - "8081:8080"
-    depends_on:
-    - "postgres"
-    restart: always
-    environment:
-      HASURA_GRAPHQL_DATABASE_URL: ${SERVICE_BOOKS_DB_URL}
-      HASURA_GRAPHQL_ACCESS_KEY: ${SERVICE_BOOKS_ACCESS_KEY}
-    command:
-      - graphql-engine
-      - serve
-      - --enable-console
-  authors-service:
-    image: hasura/graphql-engine:v1.0.0-alpha34
-    ports:
-    - "8082:8080"
-    depends_on:
-    - "postgres"
-    restart: always
-    environment:
-      HASURA_GRAPHQL_DATABASE_URL: ${SERVICE_AUTHORS_DB_URL}
-      HASURA_GRAPHQL_ACCESS_KEY: ${SERVICE_AUTHORS_ACCESS_KEY}
-    command:
-      - graphql-engine
-      - serve
-      - --enable-console
-  auth-service:
-    image: hasura/graphql-engine:v1.0.0-alpha34
-    ports:
-    - "8083:8080"
-    depends_on:
-    - "postgres"
-    restart: always
-    environment:
-      HASURA_GRAPHQL_DATABASE_URL: ${SERVICE_AUTH_DB_URL}
-      HASURA_GRAPHQL_ACCESS_KEY: ${SERVICE_AUTH_ACCESS_KEY}
-    command:
-      - graphql-engine
-      - serve
-      - --enable-console
-```
-
 #### To Do
-- [ ] Test subscriptions
-- [ ] Add ACL and set x-hasura-allowed-roles, x-hasura-default-role and x-hasura-user-id headers
-- [ ] Move login, signin and validate to auth module
 - [ ] Add refresh token, including token expiry, and persisting refresh tokens to db
+- [ ] Add ACL and set x-hasura-allowed-roles, x-hasura-default-role and x-hasura-user-id headers
+- [ ] Test subscriptions
