@@ -1,0 +1,70 @@
+version: '3.6'
+services:
+  postgres:
+    image: postgres
+    restart: always
+    volumes:
+    - db_data:/var/lib/postgresql/data
+    ports:
+    - "5432:5432"
+  edge-service:
+    image: hasura-gateway:latest
+    ports:
+    - "4000:4000"
+    restart: always
+    env_file: .env
+    depends_on:
+    - books-service
+    - authors-service
+    - auth-service
+    links:
+    - books-service
+    - authors-service
+    - auth-service
+  books-service:
+    image: hasura/graphql-engine:v1.0.0-alpha34
+    ports:
+    - "8081:8080"
+    depends_on:
+    - postgres
+    restart: always
+    env_file: .env
+    environment:
+      HASURA_GRAPHQL_DATABASE_URL: ${SERVICE_BOOKS_DB_URL}
+      HASURA_GRAPHQL_ACCESS_KEY: ${SERVICE_BOOKS_ACCESS_KEY}
+    command:
+      - graphql-engine
+      - serve
+      - --enable-console
+  authors-service:
+    image: hasura/graphql-engine:v1.0.0-alpha34
+    ports:
+    - "8082:8080"
+    depends_on:
+    - postgres
+    restart: always
+    env_file: .env
+    environment:
+      HASURA_GRAPHQL_DATABASE_URL: ${SERVICE_AUTHORS_DB_URL}
+      HASURA_GRAPHQL_ACCESS_KEY: ${SERVICE_AUTHORS_ACCESS_KEY}
+    command:
+      - graphql-engine
+      - serve
+      - --enable-console
+  auth-service:
+    image: hasura/graphql-engine:v1.0.0-alpha34
+    ports:
+    - "8083:8080"
+    depends_on:
+    - postgres
+    restart: always
+    env_file: .env
+    environment:
+      HASURA_GRAPHQL_DATABASE_URL: ${SERVICE_AUTH_DB_URL}
+      HASURA_GRAPHQL_ACCESS_KEY: ${SERVICE_AUTH_ACCESS_KEY}
+    command:
+      - graphql-engine
+      - serve
+      - --enable-console
+volumes:
+  db_data:
